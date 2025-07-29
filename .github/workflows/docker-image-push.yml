@@ -6,7 +6,7 @@ on:
       - '*'
 
 env:
-  IMAGE_NAME: opentofu-runner
+  IMAGE_NAME: nova-libvirt
 
 jobs:
   push:
