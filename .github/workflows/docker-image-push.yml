@@ -3,10 +3,11 @@ name: Docker Image Push
 on:
   push:
     tags:
-      - '*'
+      - "*"
 
 env:
   IMAGE_NAME: nova-libvirt
+  KOLLA_VERSION: "20.3.0"
 
 jobs:
   push:
@@ -19,26 +20,30 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Set up tag and image ID
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install kolla-build
+        run: |
+          pip install kolla==${{ env.KOLLA_VERSION }}
+
+      - name: Set up tag
         id: vars
         run: |
           TAG_NAME="${GITHUB_REF##refs/tags/}"
-          IMAGE_ID="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}"
-
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
-          echo "image_id=$IMAGE_ID" >> $GITHUB_OUTPUT
-
-      - name: Build Docker image
-        run: |
-          docker build . \
-            --file Dockerfile \
-            --tag ${{ steps.vars.outputs.image_id }}:${{ steps.vars.outputs.tag_name }} \
-            --label "runnumber=${GITHUB_RUN_ID}"
 
       - name: Log in to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Push Docker image
+      - name: Build and push image with kolla-build
         run: |
-          docker push ${{ steps.vars.outputs.image_id }}:${{ steps.vars.outputs.tag_name }}
-
+          kolla-build --base ubuntu \
+            --template-override template-overrides.j2 \
+            --tag ${{ steps.vars.outputs.tag_name }} \
+            --registry ghcr.io \
+            --namespace ${GITHUB_REPOSITORY_OWNER,,} \
+            --push \
+            nova-libvirt
