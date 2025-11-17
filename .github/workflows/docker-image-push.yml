@@ -28,6 +28,8 @@ jobs:
       - name: Install kolla-build
         run: |
           pip install kolla==${{ env.KOLLA_VERSION }}
+          pip install docker
+          apt install docker.io
 
       - name: Set up tag
         id: vars
